@@ -125,38 +125,38 @@ module Arb =
     open System.ComponentModel
     open System.Threading
 
-    [<AbstractClass;Sealed>]
-    type Default = class end
-
-    let internal defaultArbitrary = 
-        let empty = TypeClass<Arbitrary<obj>>.New()
-        empty.Discover(onlyPublic=true,instancesType=typeof<Default>)
-
-    let internal arbitrary = new ThreadLocal<TypeClass<Arbitrary<obj>>>(fun () -> defaultArbitrary)
-
-    ///Register the generators that are static members of the given type.
-    [<CompiledName("Register")>]
-    let registerByType t = 
-        let newTypeClass = arbitrary.Value.Discover(onlyPublic=true,instancesType=t)
-        let result = arbitrary.Value.Compare newTypeClass
-        arbitrary.Value <- arbitrary.Value.Merge newTypeClass
-        result
-
-    ///Register the generators that are static members of the type argument.
-    [<CompiledName("Register")>]
-    let register<'t>() = registerByType typeof<'t>
-
-    ///Get the Arbitrary instance for the given type.
-    [<CompiledName("From")>]
-    let from<'Value> = arbitrary.Value.InstanceFor<'Value,Arbitrary<'Value>>()
-
-    ///Returns a Gen<'Value>
-    [<CompiledName("Generate")>]
-    let generate<'Value> = from<'Value>.Generator
-
-    ///Returns the immediate shrinks for the given value based on its type.
-    [<CompiledName("Shrink")>]
-    let shrink<'Value> (a:'Value) = from<'Value>.Shrinker a
+//    [<AbstractClass;Sealed>]
+//    type Default = class end
+//
+//    let internal defaultArbitrary = 
+//        let empty = TypeClass<Arbitrary<obj>>.New()
+//        empty.Discover(onlyPublic=true,instancesType=typeof<Default>)
+//
+//    let internal arbitrary = new ThreadLocal<TypeClass<Arbitrary<obj>>>(fun () -> defaultArbitrary)
+//
+//    ///Register the generators that are static members of the given type.
+//    [<CompiledName("Register")>]
+//    let registerByType t = 
+//        let newTypeClass = arbitrary.Value.Discover(onlyPublic=true,instancesType=t)
+//        let result = arbitrary.Value.Compare newTypeClass
+//        arbitrary.Value <- arbitrary.Value.Merge newTypeClass
+//        result
+//
+//    ///Register the generators that are static members of the type argument.
+//    [<CompiledName("Register")>]
+//    let register<'t>() = registerByType typeof<'t>
+//
+//    ///Get the Arbitrary instance for the given type.
+//    [<CompiledName("From")>]
+//    let from<'Value> = arbitrary.Value.InstanceFor<'Value,Arbitrary<'Value>>()
+//
+//    ///Returns a Gen<'Value>
+//    [<CompiledName("Generate")>]
+//    let generate<'Value> = from<'Value>.Generator
+//
+//    ///Returns the immediate shrinks for the given value based on its type.
+//    [<CompiledName("Shrink")>]
+//    let shrink<'Value> (a:'Value) = from<'Value>.Shrinker a
 
     ///A generic shrinker that should work for most number-like types.
     [<EditorBrowsable(EditorBrowsableState.Never)>]
@@ -169,9 +169,9 @@ module Arb =
                         |> Seq.takeWhile ((|>|) n) }
         |> Seq.distinct
 
-    let internal getGenerator t = arbitrary.Value.GetInstance t |> unbox<IArbitrary> |> (fun arb -> arb.GeneratorObj)
+    //let internal getGenerator t = arbitrary.Value.GetInstance t |> unbox<IArbitrary> |> (fun arb -> arb.GeneratorObj)
 
-    let internal getShrink t = arbitrary.Value.GetInstance t |> unbox<IArbitrary> |> (fun arb -> arb.ShrinkerObj)
+    //let internal getShrink t = arbitrary.Value.GetInstance t |> unbox<IArbitrary> |> (fun arb -> arb.ShrinkerObj)
 
     [<EditorBrowsable(EditorBrowsableState.Never)>]
     let toGen (arb:Arbitrary<'Value>) = arb.Generator
@@ -256,66 +256,68 @@ module Arb =
 //             return Set.ofArray arr }
   
     ///A collection of default generators.
-    type Default with
+    [<AbstractClass;Sealed>]
+    type Default private() =
         static member private fraction (a:int) (b:int) (c:int) = 
             double a + double b / (abs (double c) + 1.0) 
         
         ///Generates (), of the unit type.
-        static member Unit() = 
+        static member val Unit : Arbitrary<unit> = 
             { new Arbitrary<unit>() with
                 override __.Generator = gen { return () } 
             }
         ///Generates an arbitrary bool.
-        static member Bool() = 
+        static member val Bool : Arbitrary<bool> = 
             { new Arbitrary<bool>() with
                 override __.Generator = Gen.elements [true; false] 
             }
-        ///Generates an arbitrary byte.
-        static member Byte() =
-            { new Arbitrary<byte>() with
-                override __.Generator = 
-                    Gen.choose (0,255) |> Gen.map byte //this is now size independent - 255 is not enough to not cover them all anyway 
-                override __.Shrinker n = n |> int |> shrink |> Seq.map byte
-            }
-        ///Generates an arbitrary signed byte.
-        static member SByte() =
-            { new Arbitrary<sbyte>() with
-                override __.Generator = 
-                    Gen.choose (-128,127) |> Gen.map sbyte 
-                override __.Shrinker n = 
-                  n |> int |> shrink 
-                  |> Seq.filter (fun e -> -128 <= e && e <= 127) //the int shrinker shrinks -128 to 128 which overflows
-                  |> Seq.map sbyte
-            }
-        ///Generate arbitrary int16 that is between -size and size.
-        static member Int16() =
-            from<int>
-            |> convert int16 int
-
-        ///Generate arbitrary int16 that is uniformly distributed in the whole range of int16 values.
-        static member DontSizeInt16() =
-            let gen = Gen.choose(int Int16.MinValue, int Int16.MaxValue)
-            fromGenShrink(gen, shrink)
-            |> convert (int16 >> DontSize) (DontSize.Unwrap >> int)
-
-        ///Generate arbitrary uint16 that is between 0 and size.
-        static member UInt16() =
-            from<int>
-            |> convert (abs >> uint16) int
-
-        ///Generate arbitrary uint16 that is uniformly distributed in the whole range of uint16 values.
-        static member DontSizeUInt16() =
-            let gen = Gen.choose(0, int UInt16.MaxValue)
-            fromGenShrink(gen, shrink)
-            |> convert (uint16 >> DontSize) (DontSize.Unwrap >> int)
-            
         ///Generate arbitrary int32 that is between -size and size.
-        static member Int32() = 
+        static member val Int32 : Arbitrary<int> = 
             { new Arbitrary<int>() with
                 override __.Generator = Gen.sized <| fun n -> Gen.choose (-n,n) 
                 override __.Shrinker n = shrinkNumber n
             }
+        ///Generates an arbitrary byte.
+        static member val Byte =
+            { new Arbitrary<byte>() with
+                override __.Generator = 
+                    Gen.choose (0,255) |> Gen.map byte //this is size independent - 255 is not enough to not cover them all anyway 
+                override __.Shrinker n :seq<byte> = 
+                    n |> int |> Default.Int32.Shrinker |> Seq.map byte
+            }
+        ///Generates an arbitrary signed byte.
+        static member val SByte =
+            { new Arbitrary<sbyte>() with
+                override __.Generator = 
+                    Gen.choose (-128,127) |> Gen.map sbyte 
+                override __.Shrinker n = 
+                  n |> int |> Default.Int32.Shrinker
+                  |> Seq.filter (fun e -> -128 <= e && e <= 127) //the int shrinker shrinks -128 to 128 which overflows
+                  |> Seq.map sbyte
+            }
+        ///Generate arbitrary int16 that is between -size and size.
+        static member val Int16 =
+            Default.Int32
+            |> convert int16 int
 
+        ///Generate arbitrary int16 that is uniformly distributed in the whole range of int16 values.
+        static member val DontSizeInt16 =
+            let gen = Gen.choose(int Int16.MinValue, int Int16.MaxValue)
+            fromGenShrink(gen, Default.Int32.Shrinker)
+            |> convert (int16 >> DontSize) (DontSize.Unwrap >> int)
+
+        ///Generate arbitrary uint16 that is between 0 and size.
+        static member val UInt16 =
+            Default.Int32
+            |> convert (abs >> uint16) int
+
+        ///Generate arbitrary uint16 that is uniformly distributed in the whole range of uint16 values.
+        static member val DontSizeUInt16 =
+            let gen = Gen.choose(0, int UInt16.MaxValue)
+            fromGenShrink(gen, Default.Int32.Shrinker)
+            |> convert (uint16 >> DontSize) (DontSize.Unwrap >> int)
+            
+(*
         ///Generate arbitrary int32 that is between Int32.MinValue and Int32.MaxValue
         static member DontSizeInt32() =
             //let gen = Gen.choose(Int32.MinValue, Int32.MaxValue) doesn't work with random.fs, 
@@ -949,4 +951,4 @@ module Arb =
             }
             
 
-    
+  *)  
