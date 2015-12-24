@@ -254,14 +254,6 @@ module Runner =
             member __.OnFinished(name,testResult) = 
                 printf "%s" (onFinishedToString name testResult)
         }
-           
-
-    ///Force this value to do the necessary initializations of typeclasses. Normally this initialization happens automatically. 
-    ///In any case, it can be forced any number of times without problem.
-    [<Obsolete("Calling this should no longer be necessary - though please file an issue if you find a case where it is :)")>]
-    let init = 
-        Arb.defaultArbitrary |> ignore
-        lazy ()
 
     let private hasTestableReturnType (m:MethodInfo) =
         try
@@ -271,14 +263,7 @@ module Runner =
             _ -> false
 
     let internal check config p = 
-        //save so we can restore after the run
-        let defaultArbitrary = Arb.arbitrary.Value
-        let merge newT (existingTC:TypeClass<_>) = existingTC.DiscoverAndMerge(onlyPublic=true,instancesType=newT)
-        Arb.arbitrary.Value <- List.foldBack merge config.Arbitrary defaultArbitrary
-        try
-            runner config (property p)
-        finally
-            Arb.arbitrary.Value <- defaultArbitrary
+        runner config (property p)
 
     let private checkMethodInfo = 
         typeof<TestStep>.DeclaringType.GetTypeInfo().DeclaredMethods 
