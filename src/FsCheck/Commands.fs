@@ -89,7 +89,14 @@ module Command =
                     let newModel = c.RunModel model
                     c.Post (newActual,newModel) .&. applyCommands (newActual,newModel) cs
                 
-        forAll (Arb.fromGenShrink(genCommands spec,shrink))  //note: this uses the list shrinker which is not correct - should take preconditions into accout for example
+        //note: similar to list shrinker without shrinking elements. Not correct: should take preconditions into accout.
+        let rec shrink l = 
+            match l with
+            | [] ->      Seq.empty
+            | (x::xs) -> seq { yield xs
+                               for xs' in shrink xs -> x::xs' }
+
+        forAll (Arb.fromGenShrink(genCommands spec,shrink))  
                 (fun l -> l |> applyCommands (spec.InitialActual, spec.InitialModel) 
                             |> Prop.trivial (l.Length=0)
                             |> Prop.classify (l.Length > 1 && l.Length <=6) "short sequences (between 1-6 commands)" 
