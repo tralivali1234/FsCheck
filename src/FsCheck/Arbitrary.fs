@@ -247,10 +247,10 @@ module Arb =
         ///Generates an arbitrary signed byte.
         static member val SByte =
              fromGenShrink(Gen.choose (-128,127) |> Gen.map sbyte,
-                              int 
-                              >> Default.Int32.Shrinker
-                              >> Seq.filter (fun e -> -128 <= e && e <= 127) //the int shrinker shrinks -128 to 128 which overflows
-                              >> Seq.map sbyte
+                           int 
+                           >> Default.Int32.Shrinker
+                           >> Seq.filter (fun e -> -128 <= e && e <= 127) //the int shrinker shrinks -128 to 128 which overflows
+                           >> Seq.map sbyte)
 
         ///Generate arbitrary int16 that is between -size and size.
         static member val Int16 = Default.Int32 |> convert int16 int
@@ -262,13 +262,24 @@ module Arb =
             |> convert (int16 >> DontSize) (DontSize.Unwrap >> int)
 
         ///Generate arbitrary uint16 that is between 0 and size.
-        static member val UInt16 =Default.Int32 |> convert (abs >> uint16) int
+        static member val UInt16 = Default.Int32 |> convert (abs >> uint16) int
 
         ///Generate arbitrary uint16 that is uniformly distributed in the whole range of uint16 values.
         static member val DontSizeUInt16 =
             let gen = Gen.choose(0, int UInt16.MaxValue)
             fromGenShrink(gen, Default.Int32.Shrinker)
             |> convert (uint16 >> DontSize) (DontSize.Unwrap >> int)
+
+        ///Generate a list of values. The size of the list is between 0 and the test size + 1.
+        static member FsList(element:Arbitrary<'a>) =
+            let gen = Gen.listOf element.Generator
+            let rec shrink l = 
+                match l with
+                | [] ->      Seq.empty
+                | (x::xs) -> seq { yield xs
+                                   for xs' in shrink xs -> x::xs'
+                                   for x' in element.Shrinker x -> x'::xs }
+            fromGenShrink (gen,shrink)
             
 (*
         ///Generate arbitrary int32 that is between Int32.MinValue and Int32.MaxValue
@@ -421,17 +432,6 @@ module Arb =
                         else Seq.empty
             }
 
-        ///Generate a list of values. The size of the list is between 0 and the test size + 1.
-        static member FsList() = 
-            { new Arbitrary<list<'a>>() with
-                override __.Generator = Gen.listOf generate
-                override __.Shrinker l =
-                    match l with
-                    | [] ->         Seq.empty
-                    | (x::xs) ->    seq { yield xs
-                                          for xs' in shrink xs -> x::xs'
-                                          for x' in shrink x -> x'::xs }
-            }
 
         ///Generate an object - a boxed char, string or boolean value.
         static member Object() =
@@ -889,7 +889,7 @@ module Arb =
         ///Overrides the shrinker of any type to be empty, i.e. not to shrink at all.
         static member DontShrink() =
             generate |> Gen.map DontShrink |> fromGen
-            
+*)
         ///Try to derive an arbitrary instance for the given type reflectively. 
         ///Generates and shrinks values for record, union, tuple and enum types.
         ///Also generates (but doesn't shrink) values for immutable classes 
@@ -902,6 +902,3 @@ module Arb =
                 override __.Generator = generator typeof<'a> |> Gen.map unbox<'a>
                 override __.Shrinker a = ReflectArbitrary.reflectShrink getShrink a
             }
-            
-
-  *)  
