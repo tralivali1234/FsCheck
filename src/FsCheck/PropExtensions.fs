@@ -37,6 +37,11 @@ type PropertyExtensions =
     static member When(property:Func<bool>, condition) = 
         Prop.given condition (PropertyExtensions.ToProperty property, Prop.ofTestable Res.rejected)
 
+    ///Conditional property combinator. Resulting property holds if the property holds when the condition does.
+    [<Extension>]
+    static member Implies(condition, property:Func<bool>) = 
+        PropertyExtensions.When(property, condition)
+
     //Classify test cases. Test cases satisfying the condition are assigned the classification given.
     [<Extension>]
     static member Classify (property: Action, cond:bool, name:string) = 
@@ -123,6 +128,27 @@ type PropertyExtensions =
 
     ///Construct a property that succeeds if both succeed. (cfr 'and')
     [<Extension>]
+    static member And(left: bool, right:Action) =
+        (PropertyExtensions.ToProperty left) .&. (PropertyExtensions.ToProperty right)
+        
+    ///Construct a property that succeeds if both succeed. (cfr 'and')
+    [<Extension>]
+    static member And(left: bool, right:bool) =
+        (PropertyExtensions.ToProperty left) .&. (PropertyExtensions.ToProperty right)
+
+
+    ///Construct a property that succeeds if both succeed. (cfr 'and')
+    [<Extension>]
+    static member And(left: bool, right:Func<bool>) =
+        (PropertyExtensions.ToProperty left) .&. (PropertyExtensions.ToProperty right)
+
+    ///Construct a property that succeeds if both succeed. (cfr 'and')
+    [<Extension>]
+    static member And(left: bool, right:Property) =
+        (PropertyExtensions.ToProperty left) .&. right
+
+    ///Construct a property that succeeds if both succeed. (cfr 'and')
+    [<Extension>]
     static member And(left: Property, right:Action) =
         left .&. (PropertyExtensions.ToProperty right)
 
@@ -140,6 +166,26 @@ type PropertyExtensions =
     [<Extension>]
     static member And(left: Property, right:Property) =
         left .&. right
+
+    ///Construct a property that fails if both fail. (cfr 'or')
+    [<Extension>]
+    static member Or(left: bool, right:Action) =
+        (PropertyExtensions.ToProperty left) .|. (PropertyExtensions.ToProperty right)
+        
+    ///Construct a property that fails if both fail. (cfr 'or')
+    [<Extension>]
+    static member Or(left: bool, right:bool) =
+        (PropertyExtensions.ToProperty left) .|. (PropertyExtensions.ToProperty right)
+
+    ///Construct a property that fails if both fail. (cfr 'or')
+    [<Extension>]
+    static member Or(left: bool, right:Func<bool>) =
+        (PropertyExtensions.ToProperty left) .|. (PropertyExtensions.ToProperty right)
+
+    ///Construct a property that fails if both fail. (cfr 'or')
+    [<Extension>]
+    static member Or(left: bool, right:Property) =
+        (PropertyExtensions.ToProperty left) .|. right
 
     ///Construct a property that fails if both fail. (cfr 'or')
     [<Extension>]

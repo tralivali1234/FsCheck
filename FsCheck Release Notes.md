@@ -1,5 +1,25 @@
-### 2.10.4 - To be released
+### 2.10.9 - To be released
+
+### 2.10.8 - 3 March 2018
+* Add some C# extension members to combine boolean properties. (by Stijn Moreels)
+
+### 2.10.7 - 29 January 2018
+* Fix FsCheck.NUnit issue - failure output was not shown. (by adj123)
+
+* Add C# Implies extension method. (by adj123)
+
+### 2.10.6 - 30 December 2017
+* NuGet packaging: relax FSharp.Core constraint to 4.0 and higher for .NET Desktop and PCL targets.
+
+### 2.10.5 - 28 December 2017
+* NuGet Packaging updates. (by Enrico Sada)
+
+* Small performance improvements in Gen.apply and mapN.
+
+### 2.10.4 - 8 November 2017
 * Change NuGet dependency of FsCheck.Xunit and FsCheck.NUnit on FsCheck to strict equality constraint.
+
+* Add specific dependency group to nuspec for net45 so that NuGet does not download a bunch of packages needlessly.
 
 ### 2.10.3 - 26 September 2017
 * Don't escape newline and tab characters.
